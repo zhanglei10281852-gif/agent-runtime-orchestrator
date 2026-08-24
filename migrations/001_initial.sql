@@ -11,7 +11,6 @@ CREATE TABLE users (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
-
 CREATE TABLE sessions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id),
@@ -36,7 +35,6 @@ CREATE TABLE workspaces (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
-
 CREATE TABLE trust_zones (
     id TEXT PRIMARY KEY,
     code TEXT NOT NULL UNIQUE,
@@ -49,7 +47,6 @@ CREATE TABLE trust_zones (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
-
 CREATE TABLE tool_revisions (
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL REFERENCES workspaces(id),
@@ -69,7 +66,6 @@ CREATE TABLE tool_revisions (
 );
 CREATE INDEX idx_tool_revisions_state ON tool_revisions(state, expires_at);
 CREATE INDEX idx_tool_revisions_trust_zone ON tool_revisions(requester_zone_id, created_at);
-
 CREATE TABLE execution_pools (
     id TEXT PRIMARY KEY,
     pool_key TEXT NOT NULL UNIQUE,
@@ -83,7 +79,6 @@ CREATE TABLE execution_pools (
     updated_at TEXT NOT NULL
 );
 CREATE INDEX idx_execution_pools_state_attestation ON execution_pools(state, attestation_due_at);
-
 CREATE TABLE execution_requests (
     id TEXT PRIMARY KEY,
     workspace_id TEXT NOT NULL REFERENCES workspaces(id),
@@ -104,14 +99,12 @@ CREATE TABLE execution_requests (
 );
 CREATE INDEX idx_execution_requests_route_window ON execution_requests(requester_zone_id, execution_zone_id, scheduled_start_at);
 CREATE INDEX idx_execution_requests_state ON execution_requests(state, expected_finish_at);
-
 CREATE TABLE execution_request_tools (
     request_id TEXT NOT NULL REFERENCES execution_requests(id) ON DELETE CASCADE,
     tool_revision_id TEXT NOT NULL UNIQUE REFERENCES tool_revisions(id),
     added_at TEXT NOT NULL,
     PRIMARY KEY(request_id, tool_revision_id)
 );
-
 CREATE TABLE approval_tasks (
     id TEXT PRIMARY KEY,
     request_id TEXT NOT NULL REFERENCES execution_requests(id),
@@ -128,7 +121,6 @@ CREATE TABLE approval_tasks (
 );
 CREATE UNIQUE INDEX idx_approval_task_pending_run ON approval_tasks(request_id) WHERE status = 'pending';
 CREATE INDEX idx_approval_task_expiry ON approval_tasks(status, expires_at);
-
 CREATE TABLE execution_receipts (
     id TEXT PRIMARY KEY,
     request_id TEXT NOT NULL REFERENCES execution_requests(id),
@@ -140,7 +132,6 @@ CREATE TABLE execution_receipts (
     UNIQUE(request_id, signal_key, sequence)
 );
 CREATE INDEX idx_receipts_run_time ON execution_receipts(request_id, recorded_at);
-
 CREATE TABLE policy_incidents (
     id TEXT PRIMARY KEY,
     request_id TEXT NOT NULL REFERENCES execution_requests(id),
@@ -157,7 +148,6 @@ CREATE TABLE policy_incidents (
 );
 CREATE UNIQUE INDEX idx_policy_incident_active_run ON policy_incidents(request_id) WHERE status IN ('open', 'reviewing');
 CREATE INDEX idx_policy_incident_review_due ON policy_incidents(status, review_due_at);
-
 CREATE TABLE review_decisions (
     id TEXT PRIMARY KEY,
     policy_incident_id TEXT NOT NULL REFERENCES policy_incidents(id),
@@ -166,7 +156,6 @@ CREATE TABLE review_decisions (
     rationale TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
-
 CREATE TABLE audit_events (
     id TEXT PRIMARY KEY,
     request_id TEXT NOT NULL,
@@ -180,7 +169,6 @@ CREATE TABLE audit_events (
 );
 CREATE INDEX idx_audit_entity ON audit_events(entity_type, entity_id, created_at);
 CREATE INDEX idx_audit_request ON audit_events(request_id);
-
 CREATE TABLE idempotency_records (
     scope TEXT NOT NULL,
     idempotency_key TEXT NOT NULL,
@@ -191,7 +179,6 @@ CREATE TABLE idempotency_records (
     created_at TEXT NOT NULL,
     PRIMARY KEY(scope, idempotency_key)
 );
-
 CREATE TABLE outbox_jobs (
     id TEXT PRIMARY KEY,
     kind TEXT NOT NULL,
@@ -207,8 +194,3 @@ CREATE TABLE outbox_jobs (
     updated_at TEXT NOT NULL
 );
 CREATE INDEX idx_outbox_claim ON outbox_jobs(status, available_at, created_at);
-
-CREATE TABLE schema_migrations (
-    version INTEGER PRIMARY KEY,
-    applied_at TEXT NOT NULL
-);

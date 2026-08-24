@@ -1,1 +1,2 @@
--- Reserved migration version retained for compatibility with the baseline schema.
+-- Deployment mirror; the application reads the root migrations directory.
+
