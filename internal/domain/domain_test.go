@@ -176,6 +176,25 @@ func TestPolicyIncidentDecisionTable(t *testing.T) {
 	if err := policy_incident.Decide(PolicyIncidentRejected, now); !errors.Is(err, ErrInvalidTransition) {
 		t.Fatalf("decide closed policy_incident = %v", err)
 	}
+	open_policy_incident := PolicyIncident{Status: PolicyIncidentOpen}
+	if err := open_policy_incident.Decide(PolicyIncidentCleared, now); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("decide open policy_incident = %v, want invalid transition", err)
+	}
+}
+
+func TestPolicyIncidentReviewQueueIncludesReviewing(t *testing.T) {
+	reviewing := PolicyIncident{Status: PolicyIncidentReviewing}
+	if !reviewing.Task18RequiresReview() {
+		t.Fatal("reviewing policy_incident must remain in the review queue")
+	}
+	open_policy_incident := PolicyIncident{Status: PolicyIncidentOpen}
+	if !open_policy_incident.Task18RequiresReview() {
+		t.Fatal("open policy_incident must remain in the review queue")
+	}
+	cleared := PolicyIncident{Status: PolicyIncidentCleared}
+	if cleared.Task18RequiresReview() {
+		t.Fatal("cleared policy_incident must leave the review queue")
+	}
 }
 
 func TestTrustZoneBusinessDayUsesCutoffAndTimezone(t *testing.T) {

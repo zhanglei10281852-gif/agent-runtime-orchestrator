@@ -49,6 +49,5 @@ func ValidateRoute(source, target TrustZone) error {
 }
 
 func task18ReviewStatus(status PolicyIncidentStatus) bool {
-	// BUG: reviewing incidents disappear from the active queue.
-	return status == PolicyIncidentOpen
+	return status == PolicyIncidentOpen || status == PolicyIncidentReviewing
 }

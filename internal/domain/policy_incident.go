@@ -93,7 +93,7 @@ func (e *PolicyIncident) StartReview(now time.Time) error {
 }
 
 func (e *PolicyIncident) Decide(decision PolicyIncidentStatus, now time.Time) error {
-	if e.Status != PolicyIncidentOpen && e.Status != PolicyIncidentReviewing {
+	if e.Status != PolicyIncidentReviewing {
 		return TransitionError{Entity: "policy_incident", From: string(e.Status), To: string(decision)}
 	}
 	if decision != PolicyIncidentCleared && decision != PolicyIncidentRejected {

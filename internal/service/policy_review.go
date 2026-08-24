@@ -111,8 +111,8 @@ func (s *ReviewService) EnsureReviewable(ctx context.Context, policy_incidentID 
 		if err != nil {
 			return err
 		}
-		if policy_incident.Status != domain.PolicyIncidentOpen && policy_incident.Status != domain.PolicyIncidentReviewing {
-			return errors.New("policy_incident is already decided")
+		if policy_incident.Status != domain.PolicyIncidentReviewing {
+			return errors.New("policy_incident is not under review")
 		}
 		return nil
 	})
