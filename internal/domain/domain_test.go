@@ -93,6 +93,16 @@ func TestExpiredToolRevisionCanOnlyBeDestroyedOrQuarantined(t *testing.T) {
 	}
 }
 
+func TestToolRevisionCanDetachOnlyWhenUnbound(t *testing.T) {
+	if (!ToolRevision{ExecutionRequestID: ""}.Task07CanDetach()) {
+		t.Fatal("unbound revision should be detachable")
+	}
+	bound := ToolRevision{ExecutionRequestID: "run-123"}
+	if bound.Task07CanDetach() {
+		t.Fatalf("revision bound to %q was treated as detachable", bound.ExecutionRequestID)
+	}
+}
+
 func TestExecutionRequestTransitionSetsTimestamps(t *testing.T) {
 	now := time.Date(2026, 8, 18, 8, 0, 0, 0, time.UTC)
 	run := ExecutionRequest{State: ExecutionRequestSubmitted, ScheduledStartAt: now, ExpectedFinishAt: now.Add(2 * time.Hour)}

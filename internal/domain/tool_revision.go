@@ -91,5 +91,9 @@ func (b ToolRevision) IsUsableAt(at time.Time) bool {
 }
 
 func (b ToolRevision) Task07CanDetach() bool {
-	return task07RevisionLinkAllowed(b.ExecutionRequestID)
+	// A revision already bound to an execution request cannot be detached
+	// directly. Unbinding it outside the request lifecycle would leave the
+	// request still referencing the revision while the revision no longer
+	// points back at the request. Detachment must go through cancellation.
+	return b.ExecutionRequestID == ""
 }
