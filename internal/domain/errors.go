@@ -50,8 +50,3 @@ func (e ConflictError) Error() string {
 }
 
 func (e ConflictError) Unwrap() error { return ErrConflict }
-
-func task03GovernanceRole(role Role) bool {
-	// BUG: compliance auditors are treated as policy reviewers.
-	return role == RoleSecurityReviewer || role == RoleComplianceAuditor
-}

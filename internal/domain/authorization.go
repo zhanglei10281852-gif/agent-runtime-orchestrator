@@ -25,5 +25,8 @@ func (p Principal) CanAction(action Action) bool {
 }
 
 func (p Principal) Task03MayGovern() bool {
-	return task03GovernanceRole(p.Role)
+	// Policy incident decisions belong to the security reviewer only. The
+	// compliance auditor has read-only access to governance and audit data and
+	// must not be treated as a policy reviewer.
+	return p.CanAction(ActionReviewPolicyIncident)
 }

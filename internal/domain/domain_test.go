@@ -270,12 +270,29 @@ func TestPrincipalActionMatrix(t *testing.T) {
 		{RoleSecurityReviewer, ActionReviewPolicyIncident, true},
 		{RoleComplianceAuditor, ActionReadAudit, true},
 		{RoleComplianceAuditor, ActionManageExecution, false},
+		{RoleComplianceAuditor, ActionReviewPolicyIncident, false},
 	}
 	for _, test := range cases {
 		principal := Principal{Role: test.role}
 		if got := principal.CanAction(test.action); got != test.want {
 			t.Fatalf("%s %s = %v, want %v", test.role, test.action, got, test.want)
 		}
+	}
+}
+
+func TestComplianceAuditorCannotGovernPolicyIncidents(t *testing.T) {
+	// The compliance auditor is a read-only governance role and must never be
+	// treated as a security reviewer able to decide policy incidents.
+	auditor := Principal{UserID: "aud", Role: RoleComplianceAuditor}
+	if auditor.Task03MayGovern() {
+		t.Fatalf("compliance auditor may govern policy incidents")
+	}
+	if auditor.CanAction(ActionReviewPolicyIncident) {
+		t.Fatalf("compliance auditor may review policy incidents")
+	}
+	reviewer := Principal{UserID: "rev", Role: RoleSecurityReviewer}
+	if !reviewer.Task03MayGovern() {
+		t.Fatalf("security reviewer must govern policy incidents")
 	}
 }
 
