@@ -224,6 +224,21 @@ func TestReadinessEvaluate(t *testing.T) {
 	}
 }
 
+func TestReadinessArchiveGateHonorsOpenPolicyIncident(t *testing.T) {
+	// An open policy incident with no other blockers must still block archival.
+	open := RunReadiness{ExecutionRequestState: ExecutionRequestCompleted, ExpectedToolRevisionCount: 1, MaterializedToolRevisionCount: 1, OpenPolicyIncident: true}
+	open.Evaluate()
+	if open.Complete || open.Task10CompleteForArchive() {
+		t.Fatalf("open incident should block archive: %+v", open)
+	}
+	cleared := open
+	cleared.OpenPolicyIncident = false
+	cleared.Evaluate()
+	if !cleared.Complete || !cleared.Task10CompleteForArchive() {
+		t.Fatalf("resolved incident should allow archive: %+v", cleared)
+	}
+}
+
 func TestAuditAndJobCloneIsolation(t *testing.T) {
 	event := AuditEvent{Metadata: map[string]string{"one": "1"}}
 	clone := event.Clone()

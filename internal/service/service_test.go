@@ -290,6 +290,48 @@ func TestInRangeReceiptDoesNotOpenPolicyIncident(t *testing.T) {
 	}
 }
 
+func TestArchiveBlockedWhileOpenPolicyIncidentRemains(t *testing.T) {
+	f := newServiceFixture(t)
+	run := f.planAndStart(t, "RUN-DRIFT-2")
+	// First out-of-range receipt opens incident #1 and blocks the revision.
+	first, policy_incident, err := f.services.Receipts.RecordReceipt(f.as(f.tool_operator), RecordReceiptInput{ExecutionRequestID: run.ID, SignalKey: "sensor-1", Sequence: 1, RiskScore: 12000, RecordedAt: f.clock.Now().Add(10 * time.Minute)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if policy_incident == nil {
+		t.Fatalf("first receipt did not open policy_incident")
+	}
+	if _, err := f.services.Execution.CompleteExecutionRequest(f.as(f.tool_operator), run.ID); err != nil {
+		t.Fatal(err)
+	}
+	// Reviewer clears incident #1; the revision becomes approved but remains resolved.
+	if _, err := f.services.Review.StartReview(f.as(f.security_reviewer), policy_incident.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.services.Review.Decide(f.as(f.security_reviewer), DecideInput{PolicyIncidentID: policy_incident.ID, Decision: domain.PolicyIncidentCleared, Rationale: "verified logger trace"}); err != nil {
+		t.Fatal(err)
+	}
+	// A second out-of-range receipt opens incident #2 while the revision is already approved (not blocked).
+	if _, second, err := f.services.Receipts.RecordReceipt(f.as(f.tool_operator), RecordReceiptInput{ExecutionRequestID: run.ID, SignalKey: "sensor-1", Sequence: 2, RiskScore: 15000, RecordedAt: f.clock.Now().Add(20 * time.Minute)}); err != nil || second == nil {
+		t.Fatalf("second receipt result second=%+v err=%v", second, err)
+	}
+	report, err := f.services.Query.ReconcileExecutionRequest(f.as(f.agent_developer), run.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !report.OpenPolicyIncident || report.Complete {
+		t.Fatalf("readiness should report open incident and not complete: %+v", report)
+	}
+	if report.Task10CompleteForArchive() {
+		t.Fatalf("archive gate should block while an open policy incident remains: %+v", report)
+	}
+	// Archival must be rejected because incident #2 is still open.
+	if _, err := f.services.Execution.ArchiveExecutionRequest(f.as(f.agent_developer), run.ID); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("archive with open policy_incident err = %v, want conflict", err)
+	}
+	_ = first
+}
+
 func TestQueryReadinessReportsBlockers(t *testing.T) {
 	f := newServiceFixture(t)
 	run := f.planAndStart(t, "RUN-REPORT")

@@ -244,6 +244,11 @@ func (s *ExecutionService) transitionAny(ctx context.Context, requestID string, 
 		if err := run.Transition(target, s.clock.Now()); err != nil {
 			return err
 		}
+		if target == domain.ExecutionRequestArchived {
+			if err := ensureNoUnresolvedPolicyIncidents(ctx, tx, run.ID); err != nil {
+				return err
+			}
+		}
 		now := s.clock.Now()
 		items, err := tx.ListExecutionRequestInputs(ctx, run.ID)
 		if err != nil {
@@ -294,4 +299,15 @@ func (s *ExecutionService) transitionAny(ctx context.Context, requestID string, 
 		return s.audit.Record(ctx, tx, action, "execution_request", run.ID, "success", nil)
 	})
 	return result, err
+}
+
+func ensureNoUnresolvedPolicyIncidents(ctx context.Context, tx repository.Tx, requestID string) error {
+	_, err := tx.GetActivePolicyIncident(ctx, requestID)
+	if err == nil {
+		return domain.ConflictError{Resource: "policy_incident", Reason: "unresolved quality policy incident blocks archival"}
+	}
+	if !errors.Is(err, domain.ErrNotFound) {
+		return err
+	}
+	return nil
 }

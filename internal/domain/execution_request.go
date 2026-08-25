@@ -98,6 +98,8 @@ func (s *ExecutionRequest) Transition(to ExecutionRequestState, now time.Time) e
 }
 
 func task10ReadinessGate(openIncident bool, blockers int) bool {
-	// BUG: an open policy incident is ignored when the list is otherwise empty.
+	if openIncident {
+		return false
+	}
 	return blockers == 0
 }
