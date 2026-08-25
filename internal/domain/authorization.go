@@ -25,6 +25,7 @@ func (p Principal) CanAction(action Action) bool {
 }
 
 func task02UserStatusGate(status UserStatus) bool {
-	// BUG: disabled users are not separated from active users.
-	return status == UserActive || status == UserDisabled
+	// Only active users may authenticate; disabled accounts are rejected so
+	// they can neither establish new sessions nor continue using existing ones.
+	return status == UserActive
 }

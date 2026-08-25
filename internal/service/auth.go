@@ -69,7 +69,7 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (LoginResult,
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("authenticate user: %w", err)
 	}
-	if user.Status != domain.UserActive || bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)) != nil {
+	if !user.Task02CanAuthenticate() || bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(input.Password)) != nil {
 		return LoginResult{}, fmt.Errorf("invalid credentials: %w", domain.ErrConflict)
 	}
 	token, tokenHash, err := newToken()
@@ -113,7 +113,7 @@ func (s *AuthService) Authenticate(ctx context.Context, token string) (domain.Pr
 		}
 		return domain.Principal{}, fmt.Errorf("authenticate session: %w", err)
 	}
-	if session.RevokedAt != nil || !session.ExpiresAt.After(s.clock.Now()) || user.Status != domain.UserActive {
+	if session.RevokedAt != nil || !session.ExpiresAt.After(s.clock.Now()) || !user.Task02CanAuthenticate() {
 		return domain.Principal{}, fmt.Errorf("session is no longer active: %w", domain.ErrUnauthenticated)
 	}
 	return domain.Principal{UserID: user.ID, Email: user.Email, DisplayName: user.DisplayName, Role: user.Role, SessionID: session.ID}, nil

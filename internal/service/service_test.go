@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"path/filepath"
 	"testing"
@@ -12,6 +14,7 @@ import (
 	"github.com/zhanglei10281852-gif/agent-runtime-orchestrator/internal/repository"
 	"github.com/zhanglei10281852-gif/agent-runtime-orchestrator/internal/requestmeta"
 	"github.com/zhanglei10281852-gif/agent-runtime-orchestrator/internal/storage/sqlite"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type serviceFixture struct {
@@ -116,6 +119,37 @@ func TestAuthRejectsWrongPasswordAndHonorsLogout(t *testing.T) {
 	if _, err := f.services.Auth.Authenticate(f.ctx, "missing-token"); !errors.Is(err, domain.ErrUnauthenticated) {
 		t.Fatalf("missing token error = %v, want unauthenticated", err)
 	}
+}
+
+func TestDisabledAccountCannotEstablishSession(t *testing.T) {
+	f := newServiceFixture(t)
+	now := f.clock.Now()
+	hash, err := bcrypt.GenerateFromPassword([]byte("very-secure-password"), bcrypt.DefaultCost)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabled := domain.User{ID: "usr_disabled", Email: "disabled@example.test", DisplayName: "Disabled", PasswordHash: string(hash), Role: domain.RoleAgentDeveloper, Status: domain.UserDisabled, Version: 1, CreatedAt: now, UpdatedAt: now}
+	if err := f.store.WithTx(f.ctx, func(tx repository.Tx) error { return tx.InsertUser(f.ctx, disabled) }); err != nil {
+		t.Fatalf("insert disabled user: %v", err)
+	}
+	// A disabled account must not be able to establish a new session.
+	if _, err := f.services.Auth.Login(f.ctx, LoginInput{Email: disabled.Email, Password: "very-secure-password"}); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("disabled login error = %v, want conflict", err)
+	}
+	// A session issued before the account was disabled must also be rejected:
+	// persist a session for the disabled user directly, then attempt to use it.
+	session := domain.Session{ID: "ses_disabled", UserID: disabled.ID, TokenHash: tokenHashFor("disabled-token"), ExpiresAt: now.Add(time.Hour), CreatedAt: now}
+	if err := f.store.WithTx(f.ctx, func(tx repository.Tx) error { return tx.InsertSession(f.ctx, session) }); err != nil {
+		t.Fatalf("insert session for disabled user: %v", err)
+	}
+	if _, err := f.services.Auth.Authenticate(f.ctx, "disabled-token"); !errors.Is(err, domain.ErrUnauthenticated) {
+		t.Fatalf("disabled account session error = %v, want unauthenticated", err)
+	}
+}
+
+func tokenHashFor(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }
 
 func TestExecutionIsIdempotentAndReservesRelatedEntities(t *testing.T) {

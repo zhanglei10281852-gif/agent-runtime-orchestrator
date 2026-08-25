@@ -257,6 +257,17 @@ func TestExecutionWindowChecksWorkspaceLimitAndExpiry(t *testing.T) {
 	}
 }
 
+func TestDisabledUserCannotAuthenticate(t *testing.T) {
+	active := User{Status: UserActive}
+	if !active.Task02CanAuthenticate() {
+		t.Fatalf("active user should authenticate")
+	}
+	disabled := User{Status: UserDisabled}
+	if disabled.Task02CanAuthenticate() {
+		t.Fatalf("disabled user should not be able to establish or use a session")
+	}
+}
+
 func TestPrincipalActionMatrix(t *testing.T) {
 	cases := []struct {
 		role   Role
