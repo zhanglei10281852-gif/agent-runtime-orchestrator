@@ -90,6 +90,15 @@ func (b ToolRevision) IsUsableAt(at time.Time) bool {
 	return b.ExpiresAt.After(at) && b.State != ToolRevisionRejected
 }
 
+// AvailableForNewRun reports whether a revision is free to be attached to a
+// brand-new execution request: it must not be expired, must not be rejected,
+// and must not already be bound to an existing request. Revisions advancing
+// through the lifecycle of an existing run (reserved -> executing -> executed)
+// intentionally bypass this check and only consult IsUsableAt.
+func (b ToolRevision) AvailableForNewRun(at time.Time) bool {
+	return b.IsUsableAt(at) && task19RevisionLinkAllowed(b.ExecutionRequestID)
+}
+
 func (b ToolRevision) Task19CanDetach() bool {
 	return task19RevisionLinkAllowed(b.ExecutionRequestID)
 }

@@ -111,6 +111,9 @@ func (s *ExecutionService) PlanExecutionRequest(ctx context.Context, input PlanE
 			if batch.WorkspaceID != workspace.ID || batch.RequesterZoneID != source.ID {
 				return domain.ConflictError{Resource: "tool_revision", Reason: "revision belongs to another workspace or requester trust zone"}
 			}
+			if !batch.AvailableForNewRun(now) {
+				return domain.ConflictError{Resource: "tool_revision", Reason: "revision is expired, rejected, or already bound to another run"}
+			}
 			if err := batch.Transition(domain.ToolRevisionReserved, now); err != nil {
 				return err
 			}

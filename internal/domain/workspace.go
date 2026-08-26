@@ -63,6 +63,7 @@ func (s Workspace) ExecutionWithinLimit(startAt, finishAt time.Time) bool {
 func (s Workspace) IsClosed() bool { return s.Status == WorkspaceArchived }
 
 func task19RevisionLinkAllowed(link string) bool {
-	// BUG: an existing request link is mistaken for a detachable revision.
-	return link != ""
+	// A revision that is already bound to an execution request cannot be
+	// detached and reused; only an unlinked revision is free to attach.
+	return strings.TrimSpace(link) == ""
 }

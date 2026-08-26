@@ -311,3 +311,31 @@ func TestTerminalStateHelpers(t *testing.T) {
 		t.Fatal("policy_incident resolved states are incorrect")
 	}
 }
+
+func TestToolRevisionUsableRejectsExpiredRejectedAndLinked(t *testing.T) {
+	now := time.Date(2026, 8, 18, 8, 0, 0, 0, time.UTC)
+	fresh := ToolRevision{State: ToolRevisionVerified, ExpiresAt: now.Add(time.Hour), ExecutionRequestID: ""}
+	if !fresh.IsUsableAt(now) {
+		t.Fatalf("fresh unlinked verified revision should be usable")
+	}
+	expired := fresh
+	expired.ExpiresAt = now.Add(-time.Minute)
+	if expired.IsUsableAt(now) {
+		t.Fatal("expired revision should not be usable")
+	}
+	rejected := fresh
+	rejected.State = ToolRevisionRejected
+	if rejected.IsUsableAt(now) {
+		t.Fatal("rejected revision should not be usable")
+	}
+	// A bound revision stays usable for advancing its own run lifecycle...
+	linked := fresh
+	linked.ExecutionRequestID = "run_active"
+	if !linked.IsUsableAt(now) {
+		t.Fatal("revision bound to its own run must remain usable for lifecycle advances")
+	}
+	// ...but is not available to be attached to a brand-new run.
+	if linked.AvailableForNewRun(now) {
+		t.Fatal("revision bound to an execution request should not be available for a new run")
+	}
+}
