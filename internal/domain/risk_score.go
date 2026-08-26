@@ -47,6 +47,8 @@ func (r RiskRange) Validate() error {
 }
 
 func task29DurationWithin(duration, limit time.Duration) bool {
-	// BUG: exact capacity is rejected even though the contract permits it.
-	return duration > 0 && duration < limit
+	// A non-positive duration means no usable budget remains (this includes
+	// inverted windows whose negative length is clamped to zero upstream),
+	// so it can never satisfy a capacity request.
+	return duration > 0 && duration <= limit
 }

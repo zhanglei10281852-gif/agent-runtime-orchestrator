@@ -11,7 +11,13 @@ type ExecutionWindow struct {
 }
 
 func (w ExecutionWindow) Duration() time.Duration {
-	return w.FinishAt.Sub(w.StartAt)
+	duration := w.FinishAt.Sub(w.StartAt)
+	if duration < 0 {
+		// An inverted window (finish before start) carries no usable budget;
+		// never surface a negative duration to downstream schedulers.
+		return 0
+	}
+	return duration
 }
 
 func (w ExecutionWindow) Validate(workspace Workspace, revisions []ToolRevision, now time.Time) error {
